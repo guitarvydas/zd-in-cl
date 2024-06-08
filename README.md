@@ -15,3 +15,5 @@ $ sbcl --script zd.lisp
 	- this technique can be extended to compile DPLs (Diagrammatic Programming Languages)
 		- see further examples of this [*references to existing repos need to be included here*]
 	- this shows how structured "systems" code can be programmed at low levels, but invisible to non-systems programmers
+	- this technique doesn't NEED to use operating systems, threads, buffers, and, other complicated stuff (yet, this example is built to run on MacOS, etc.)
+	
