@@ -26,11 +26,13 @@
 (defun SWB/input (self)
   (fld self 'input))
 
+(defun SWB/name (self)
+  (fld self 'name))
+
 (defun SWB/state (self)
   (fld self 'state))
 
 (defun SWB/handler (self msg outq)
-  (format *error-output* "~a -> ~a~%" (fld msg 'port) (fld self 'name))
   (funcall (fld self 'handler) self msg outq))
 
 
@@ -62,6 +64,9 @@
 (defun Queue/empty? (q)
   (null (fld q 'queue)))
 
+(defun Queue/length (q)
+  (length (fld q 'queue)))
+
 
 
 ;; fundamental - Message
@@ -82,7 +87,7 @@
     (fset self 'sender from-who)
     (fset self 'send-port from-port)
     (fset self 'receiver to-who)
-    (fset self 'receive_port to-port)
+    (fset self 'receive-port to-port)
     self))
 (defun Connection/sender (self) (fld self 'sender))
 (defun Connection/send-port (self) (fld self 'send-port))
@@ -129,9 +134,10 @@
    (exit-when (Queue/empty? outq))
    (let ((out-msg (Queue/get outq)))
      (mapc #'(lambda (c)
-              (when (and (eq (Connection/sender c) child) (eq (Message/port out-msg) (Connection/send-port c)))
+              (when (and (eq (Connection/sender c) child) (equal (Message/port out-msg) (Connection/send-port c)))
                 (let ((remapped-msg (Container/make-msg-relative-to-receiver out-msg (Connection/receive-port c))))
-                  (Queue/put (SWB/input child) remapped-msg))))
+                  (let ((receiver (Connection/receiver c)))
+                    (Queue/put (SWB/input receiver) remapped-msg)))))
            (Container/connections container-self)))))
 
 (defun Container/make-msg-relative-to-receiver (msg port)
@@ -224,7 +230,7 @@
       (let ((w (Example-Container/writer top)))
         (Queue/put (fld w 'input) (Message/new :port "go" :payload t))
         (Container/dispatcher top))))
-  (format *standard-output* "~%"))
+  (values))
 
 ;; TL;DR:
 ;; - this is a simplified example to demonstrate the fundamentals of 0D
