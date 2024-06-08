@@ -1,3 +1,10 @@
+
+;; TL;DR:
+;; - this is a simplified example to demonstrate the fundamentals of 0D
+;; - for brevity, I omit handler code for Containers (which deals with connection directions)
+;;     -- you need the above for useful 0D programming ; it ain't hard to add, but, the atomic principles of 0D are easier to understand if such nuance is elided
+
+
 (defmacro cycle (&body body) `(cl:loop ,@body))
 (defmacro exit-when (test) `(cl:when ,test (cl:return)))
 
@@ -10,33 +17,6 @@
 (defmacro Object/new ()
   `(make-hash-table :test 'equal))
   
-
-;;; SWB - SoftWare Block (inspired by LEGO(R) block)
-
-;; constructor
-(defun SWB/new ()
-  (let ((self (Object/new)))
-    (fset self 'name "<noname>")
-    (fset self 'input (Queue/new))
-    (fset self 'state 'idle)
-    (fset self 'handler nil)
-    self))
-
-;; accessors
-(defun SWB/input (self)
-  (fld self 'input))
-
-(defun SWB/name (self)
-  (fld self 'name))
-
-(defun SWB/state (self)
-  (fld self 'state))
-
-(defun SWB/handler (self msg outq)
-  (funcall (fld self 'handler) self msg outq))
-
-
-
 
 ;; fundamental - Queue
 (defun Queue/new ()
@@ -77,6 +57,34 @@
     self))
 (defun Message/port (self) (fld self 'port))
 (defun Message/payload (self) (fld self 'payload))
+
+;;; SWB - SoftWare Block (inspired by LEGO(R) block)
+
+;; constructor
+(defun SWB/new ()
+  (let ((self (Object/new)))
+    (fset self 'name "<noname>")
+    (fset self 'input (Queue/new))
+    (fset self 'state 'idle)
+    (fset self 'handler nil)
+    self))
+
+;; accessors
+(defun SWB/input (self)
+  (fld self 'input))
+
+(defun SWB/name (self)
+  (fld self 'name))
+
+(defun SWB/state (self)
+  (fld self 'state))
+
+(defun SWB/handler (self msg outq)
+  (funcall (fld self 'handler) self msg outq))
+
+
+
+
   
 
 
@@ -107,11 +115,6 @@
 (defun Container/children (self) (fld self 'children))
 (defun Container/connections (self) (fld self 'connections))
 
-(defun Container/dispatcher (self)
-  (cycle
-   (exit-when (not (Container/any-child-ready self)))
-   (Container/dispatch-some-child self)))
-
 (defun Container/any-child-ready (self)
   (mapc #'(lambda (child)
 	    (when (not (Queue/empty? (SWB/input child)))
@@ -119,15 +122,8 @@
     (Container/children self))
   nil)
   
-(defun Container/dispatch-some-child (self)
-  (mapc #'(lambda (child)
-	    (when (not (Queue/empty? (SWB/input child)))
-	      (let ((in-msg (Queue/get (SWB/input child))))
-		(let ((outq (Queue/new)))
-		  (SWB/handler child in-msg outq)
-                  (Container/route-outputs self child outq)
-                  (return-from Container/dispatch-some-child)))))
-        (Container/children self)))
+(defun Container/make-msg-relative-to-receiver (msg port)
+  (Message/new :port port :payload (Message/payload msg)))
 
 (defun Container/route-outputs (container-self child outq)
   (cycle
@@ -140,22 +136,32 @@
                     (Queue/put (SWB/input receiver) remapped-msg)))))
            (Container/connections container-self)))))
 
-(defun Container/make-msg-relative-to-receiver (msg port)
-  (Message/new :port port :payload (Message/payload msg)))
+(defun Container/dispatch-some-child (self)
+  (mapc #'(lambda (child)
+	    (when (not (Queue/empty? (SWB/input child)))
+	      (let ((in-msg (Queue/get (SWB/input child))))
+		(let ((outq (Queue/new)))
+		  (SWB/handler child in-msg outq)
+                  (Container/route-outputs self child outq)
+                  (return-from Container/dispatch-some-child)))))
+        (Container/children self)))
+
+(defun Container/dispatcher (self)
+  (cycle
+   (exit-when (not (Container/any-child-ready self)))
+   (Container/dispatch-some-child self)))
 
 
 ;;;;;;;;;;;
 
 
 ;; Example SWB - Reader
-(defun Reader/new ()
-  (let ((self (SWB/new)))
-    (fset self 'filename "")
-    (fset self 'fd nil)
-    (fset self 'handler #'Reader/handler)
-    (fset self 'name "Reader")
-    self))
 
+;;; read 1 character from stream fd, return nil on EOF
+(defun getc (fd)
+  (read-char fd nil nil))
+
+	  
 (defun Reader/handler (self msg outq)
   (cond
     ((eq (SWB/state self) 'idle)
@@ -171,14 +177,17 @@
 	(t (error (format nil "unhandled message in Reader ~a" msg)))))
     (t (error "unknown state for Reader"))))
 
-
-;; Example SWB - Writer
-(defun Writer/new ()
+(defun Reader/new ()
   (let ((self (SWB/new)))
-    (fset self 'handler #'Writer/handler)
-    (fset self 'name "Writer")
+    (fset self 'filename "")
+    (fset self 'fd nil)
+    (fset self 'handler #'Reader/handler)
+    (fset self 'name "Reader")
     self))
 
+
+
+;; Example SWB - Writer
 (defun Writer/handler (self msg outq)
   (cond
     ((eq (SWB/state self) 'idle)
@@ -192,6 +201,12 @@
 	  (quit))
 	(t (error (format nil "unhandled message in Writer ~a" msg)))))
     (t (error "unknown state for Writer"))))
+
+(defun Writer/new ()
+  (let ((self (SWB/new)))
+    (fset self 'handler #'Writer/handler)
+    (fset self 'name "Writer")
+    self))
 
 
 
@@ -213,11 +228,8 @@
   (second (Container/children self)))
 
 
-;;; read 1 character from stream fd, return nil on EOF
-(defun getc (fd)
-  (read-char fd nil nil))
+(defun get-zd-directory () #P"~/projects/zd-in-cl/")
 
-	  
 ;;; run the example by invoking (main) from the REPL
 (defun main ()
   (let ((*default-pathname-defaults* (get-zd-directory)))
@@ -232,9 +244,4 @@
         (Container/dispatcher top))))
   (values))
 
-;; TL;DR:
-;; - this is a simplified example to demonstrate the fundamentals of 0D
-;; - for brevity, I omit handler code for Containers (which deals with connection directions)
-;;     -- you need the above for useful 0D programming ; it ain't hard to add, but, the atomic principles of 0D are easier to understand if such nuance is elided
-
-(defun get-zd-directory () "~/projects/zd-in-cl/")
+(main)
