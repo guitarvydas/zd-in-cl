@@ -1,7 +1,7 @@
 # Demonstration of stripped-down 0D (zero dependency) system written in Common Lisp
 
 # usage
-$ sbcl --script zd.lisp
+$ make
 
 # About
 - minimal (not practical) example of 1 reader and 1 writer arranged in a pipeline
@@ -13,7 +13,9 @@ $ sbcl --script zd.lisp
 		- the lowest layers contain systems code
 		- non-systems programmers can compose SWBs at higher levels without need-to-know what is happening at lower layers
 	- this technique can be extended to compile DPLs (Diagrammatic Programming Languages)
-		- see further examples of this [*references to existing repos need to be included here*]
+		- see further examples of this [for example https://github.com/guitarvydas/0D]
 	- this shows how structured "systems" code can be programmed at low levels, but invisible to non-systems programmers
 	- this technique doesn't NEED to use operating systems, threads, buffers, and, other complicated stuff (yet, this example is built to run on MacOS, etc.)
 	
+# See Also
+- see more documentation in https://guitarvydas.github.io/2024/05/28/0D-in-Python.html
