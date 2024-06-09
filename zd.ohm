@@ -1,0 +1,37 @@
+zd {
+  Object = "❲defobj❳" name "{" Fresh Method_rec? "}"
+  Fresh = "❲fresh❳" FormalParameters "{" FieldDefinition_rec "}"
+  
+  Method_rec = "❲method❳" name FormalParameters "{" Expr_rec "}"
+
+  FormalParameters = "(" Formal_rec? ")"
+  Formal_rec = name Formal_rec?
+
+  FieldDefinition_rec = "." name "=" FieldDefinition_rec?
+  
+  name = "❲" upto<"❳">
+  upto<s> = (~s any)+ s
+
+  Expr_rec = Expr Expr_rec?
+  
+  Expr =
+    | MethodCall -- method
+    | Atom -- atom
+
+  MethodCall = name "/" name ActualParameters
+  ActualParameters = "(" Expr_rec? ")"
+
+  Atom =
+    | string -- string
+    | symbol -- symbol
+    | bottom -- bottom
+
+  bottom = "⊥"
+  string = dq notDQ* dq
+  dq = "\""
+  notDQ = ~dq any
+  symbol = sq notSQ* sq
+  sq = "'"
+  notSQ = ~sq any
+  
+}
